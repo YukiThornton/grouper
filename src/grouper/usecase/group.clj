@@ -186,3 +186,38 @@
     (println "")
     (create-two-sessions shuffled-members shuffled-pairs blocks)))
 
+
+
+
+(defn paired-once [pair history]
+  (not (not-any? #(and (contains? % (first pair)) (contains? % (second pair))) history)))
+
+(defn to-pairs [requests history]
+  (let [kv-list (mapcat (fn [[k values]] (map #(list k %) values)) requests)
+        filtered-list (filter #(not (paired-once % history)) kv-list)
+        request-map (create-requested-pair-counts filtered-list)
+        prior-pairs (filtered-keys #(= 2 (val %)) request-map)
+        pairs (filtered-keys #(= 1 (val %)) request-map)
+        shuffled-pairs (concat (shuffle prior-pairs) (shuffle pairs))]
+    shuffled-pairs))
+
+(defn combination-map [coll] (reduce (fn [m v] (assoc m v (filter #(not= v %) coll))) {} coll))
+
+(defn create-blocks-from-history [history]
+  (reduce (fn [m v] (merge-with #(distinct (concat %1 %2)) m (combination-map v))) {} history))
+
+(defn to-block-map [requests history]
+  (let [blocks-from-history (create-blocks-from-history history)
+        blocks (merge-with #(distinct (concat %1 %2)) blocks-from-history requests)
+        kv-list (mapcat (fn [[k values]] (map #(list k %) values)) blocks)]
+    (reduce (fn [m [e1 e2]] (merge-with #(distinct (concat %1 %2)) m {e1 (list e2)} {e2 (list e1)})) {} kv-list)))
+
+(defn migrate-param [{:keys [group-count members group-requests block-requests history]}]
+  {:groups (repeat group-count '())
+   :pairs (to-pairs group-requests history)
+   :members (shuffle (into '() members))
+   :blocks (to-block-map block-requests history)})
+
+(defn make-groups [param]
+  (let [{:keys [groups pairs members block]} (migrate-param param)]
+    (create-groups-r groups pairs members block)))
