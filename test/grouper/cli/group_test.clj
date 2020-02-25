@@ -55,32 +55,40 @@
           (when (= "b.csv" %) #{:b1 :a1}))]
       (t/is (= #{:a1 :a2 :b1} (sut/load-history))))))
 
-(t/deftest test-to-grouping-details
-  (t/testing "Creates grouping details from provided input"
+(t/deftest test-to-grouping-requirement
+  (t/testing "Creates grouping requirement from provided input"
+    (let [param {:group-requests :group-csv}
+          expected {:group-count 5
+                    :members "MEMBERS"}]
+      (with-redefs [sut/to-members #(when (= :group-csv %) "MEMBERS")]
+        (t/is (= expected (sut/to-grouping-requirement param)))))))
+
+(t/deftest test-to-grouping-request
+  (t/testing "Creates grouping request from provided input"
     (let [group-csv "group.csv"
           block-csv "block.csv"
           param {:group-requests group-csv
                  :block-requests block-csv}
-          expected {:group-count 5
-                    :members "MEMBERS"
-                    :group-requests "GROUP_REQUESTS"
+          expected {:group-requests "GROUP_REQUESTS"
                     :block-requests "BLOCK_REQUESTS"
                     :history "HISTORY"}]
-      (with-redefs [sut/to-members #(when (= group-csv %) "MEMBERS")
-                    sut/to-requests
+      (with-redefs [sut/to-requests
                     #(if (= group-csv %)
                        "GROUP_REQUESTS"
                        (when (= block-csv %) "BLOCK_REQUESTS"))
                     sut/load-history (fn [] "HISTORY")]
-        (t/is (= expected (sut/to-grouping-details param)))))))
+        (t/is (= expected (sut/to-grouping-request param)))))))
 
 (t/deftest test-to-groups
   (t/testing "Creates groups from provided param"
     (let [param {:param "PARAM"}
-          details {:details "DETAILS"}
-          expected #{"GROUPS"}]
-      (with-redefs [sut/to-grouping-details #(when (= param %) details)
-                    usecase/make-groups #(when (= details %) expected)]
+          usecase-result {:groups [{:members [:mem1 :mem2]}
+                                   {:members [:mem3 :mem4]}]}
+          expected [[:mem1 :mem2] [:mem3 :mem4]]]
+      (with-redefs [sut/to-grouping-requirement #(when (= param %) :requirement)
+                    sut/to-grouping-request #(when (= param %) :request)
+                    usecase/highest-scored-group-lot
+                    #(when (and (= :requirement %1) (= :request %2)) usecase-result)]
         (t/is (= expected (sut/to-groups param)))))))
 
 (t/deftest test-to-csv-lines

@@ -36,16 +36,21 @@
 (defn load-history []
   (into #{} (mapcat to-history-from-csv (get-history-files))))
 
-(defn to-grouping-details [{:keys [group-requests block-requests]}]
+(defn to-grouping-requirement [{:keys [group-requests]}]
   {:group-count 5
-   :members (to-members group-requests)
-   :group-requests (to-requests group-requests)
+   :members (to-members group-requests)})
+
+(defn to-grouping-request [{:keys [group-requests block-requests]}]
+  {:group-requests (to-requests group-requests)
    :block-requests (to-requests block-requests)
    :history (load-history)})
 
 (defn to-groups [param]
-  (-> (to-grouping-details param)
-      (usecase/make-groups)))
+  (let [group-lot(usecase/highest-scored-group-lot (to-grouping-requirement param)
+                                                   (to-grouping-request param))]
+    (println (:groups group-lot))
+    (println (:score group-lot))
+    (map :members (:groups group-lot))))
 
 (defn- to-csv-line [coll]
   (str (str/join "," coll) \newline))
