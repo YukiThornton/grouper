@@ -5,38 +5,34 @@
             [grouper.domain.picker :as picker]
             [clojure.test :as t]))
 
-(t/deftest test-create-evaluated-group-lot
-  (t/testing "Creates a single lot with grouper and an evaluator"
-    (let [expected :evaluated-lot
-          request :request
-          param {:request request
-                 :grouper #(when (= request %) :lot)
-                 :evaluators [#(when (= :lot %) :evaluated-lot)]}]
-      (t/is (= expected (sut/create-evaluated-group-lot param)))))
+(t/deftest test-combine-evaluators
+  (t/testing "Combine evaluators to create a function"
+    (let [evaluator1 (fn [g] (when (= :group1 g) :group2))
+          evaluator2 (fn [g] (when (= :group2 g) :group3))
+          evaluator3 (fn [g] (when (= :group3 g) :group4))
+          combined-fn (sut/combine-evaluators [evaluator1 evaluator2 evaluator3])]
+      (t/is (= :group4 (combined-fn :group1))))))
 
-  (t/testing "Creates a single lot with grouper and multiple evaluators"
-    (let [expected :evaluated-lot3
-          request :request
-          param {:request request
-                 :grouper #(when (= request %) :lot)
-                 :evaluators [#(when (= :lot %) :evaluated-lot1)
-                              #(when (= :evaluated-lot1 %) :evaluated-lot2)
-                              #(when (= :evaluated-lot2 %) :evaluated-lot3)]}]
-      (t/is (= expected (sut/create-evaluated-group-lot param))))))
+(t/deftest test-combine-grouper&evaluators
+  (t/testing "Combine grouper and evaluators to create a function"
+    (let [request {:request {}}
+          grouper (fn [r] (when (= request r) :group1))
+          combined-evaluators (fn [g] (when (= :group1 g) :group2))
+          evaluators [:evaluator-fn1 :evaluator-fn2]]
+      (with-redefs [sut/combine-evaluators (fn [evals] (when (= evaluators evals) combined-evaluators))]
+        (let [combined-fn (sut/combine-grouper&evaluators grouper evaluators)]
+          (t/is (= :group2 (combined-fn request))))))))
 
-(t/deftest test-create-evaluated-group-lots
-  (t/testing "Creates specified amount of lots with grouper and evaluators"
-    (let [expected [:lot :lot :lot]
-          param {:grouper :grouper-fn
-                 :request :request
-                 :evaluators :evaluators
-                 :lot-count 3}
-          param-for-lot {:grouper :grouper-fn
-             :request :request
-             :evaluators :evaluators}]
-      (with-redefs [sut/create-evaluated-group-lot
-                    #(when (= param-for-lot %) :lot)]
-        (t/is (= expected (sut/create-evaluated-group-lots param)))))))
+(t/deftest test-create-lot-generator
+  (t/testing "Creates a function that returns a single lot"
+    (let [expected :lot
+          fn1 (fn [req] (when (= :request req) :lot))
+          target-fn (sut/create-lot-generator fn1 :request)]
+      (t/is (= expected (target-fn))))))
+
+(t/deftest test-map-times
+  (t/testing "Invoke function specified times and map return values"
+    (t/is (= [:a :a :a] (sut/map-times 3 (fn [] :a))))))
 
 (t/deftest test-highest-scored-group-lot
   (t/testing "Creates 100 lots of random groups and returns one with highest score"
@@ -47,13 +43,19 @@
                     #(when (= requirement %)
                        :grouper-fn)
                     evaluator/score-based-evaluator
-                    #(when (and (= request %1)
-                                (= :score %2))
+                    #(when (= request %)
                        :evaluator-fn)
-                    sut/create-evaluated-group-lots
-                    #(when (and (= :grouper-fn (:grouper %))
-                                (= :evaluator-fn (first (:evaluators %)))
-                                (= 100 (:lot-count %)))
+                    sut/combine-grouper&evaluators
+                    #(when (and (= :grouper-fn %1)
+                                (= :evaluator-fn (first %2)))
+                       :combined-f)
+                    sut/create-lot-generator
+                    #(when (and (= :combined-f %1)
+                                (= :request %2))
+                       :generator-f)
+                    sut/map-times
+                    #(when (and (= 100 %1)
+                                (= :generator-f %2))
                        :group-lots)
                     picker/high-score-picker
                     #(when (= [:score :value] %)

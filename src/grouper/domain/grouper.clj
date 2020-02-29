@@ -22,3 +22,4 @@
       (let [shuffled (shuffle members-vec)]
         {:groups
          (map (fn [[start end]] {:members (subvec shuffled start end)}) indeces)}))))
+

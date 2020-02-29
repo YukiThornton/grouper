@@ -7,56 +7,71 @@
              :conflict -20
              :history-block -70})
 
+(defn score-with-type [type] {:type type :score (type scores)})
 
-(defn- all-combinations-r [[first & rst] result]
+(defn- all-pair-combinations-r [[first & rst] result]
   (if (empty? rst)
     result
     (recur rst (concat result (map #(set [first %]) rst)))))
 
-(defn all-combinations [seq]
-  (all-combinations-r seq []))
+(defn- all-pair-combinations [seq]
+  (all-pair-combinations-r seq []))
 
-(defn pair-up [[elm elms]]
+(defn- pair-up [[elm elms]]
   (map #(set [elm %]) elms))
 
-(defn map-value-based-on-occurence [seq single-val double-val]
-  (let [occurence-map (frequencies seq)]
-    (reduce-kv
-     (fn [m k v] (if (= 1 v) (assoc m k single-val) (assoc m k double-val)))
-     {}
-     occurence-map)))
+(defn- map-filled-with [keys v]
+  (->> (repeat (count keys) v)
+       (zipmap keys)))
 
-(defn score [type] {:type type :score (type scores)})
+(defn- filter-with-frequency [coll frequency]
+  (->> (frequencies coll)
+       (filter #(= (val %) frequency))
+       (map first)))
 
-(defn score-by-occurence [requests single-score-type double-score-type]
-  (let [pairs (flatten (map pair-up requests))]
-    (map-value-based-on-occurence pairs (score single-score-type) (score double-score-type))))
+(defn- request->pair&score-map [requests oneway-type mutual-type]
+  (let [all-pairs (flatten (map pair-up requests))
+        unique-pairs (into #{} all-pairs)
+        mutual-pairs (filter-with-frequency all-pairs 2)
+        unique-pairs&score-map (map-filled-with unique-pairs (score-with-type oneway-type))
+        mutual-pairs&score-map (map-filled-with mutual-pairs (score-with-type mutual-type))]
+    (merge unique-pairs&score-map mutual-pairs&score-map)))
 
-(defn scored-combination [{:keys [group-requests block-requests history]}]
-  (let [unique-history-pairs (into #{} (flatten (map all-combinations history)))
-        history-scores (into {} (map (fn [pair] [pair (score :history-block)]) unique-history-pairs))
-        g-request-scores (score-by-occurence group-requests :oneway-request :mutual-request)
-        b-request-scores (score-by-occurence block-requests :oneway-block :mutual-block)
-        request-scores (merge-with (fn [_ _] (score :conflict)) g-request-scores b-request-scores)]
-    (merge request-scores history-scores)))
+(defn- group&block->pair&score-map [group-requests block-requests]
+  (let [ps-map-from-group
+        (request->pair&score-map group-requests :oneway-request :mutual-request)
+        ps-map-from-block
+        (request->pair&score-map block-requests :oneway-block :mutual-block)
+        overwrite-with-conflict (fn [_ _] (score-with-type :conflict))]
+    (merge-with overwrite-with-conflict ps-map-from-group ps-map-from-block)))
 
-(defn score-group [group scored-combination score-key]
+(defn- history->pair&score-map [history]
+  (let [history-pairs (flatten (map all-pair-combinations history))
+        unique-history-pairs (into #{} history-pairs)]
+    (map-filled-with unique-history-pairs (score-with-type :history-block))))
+
+(defn- create-pair&score-map [{:keys [group-requests block-requests history]}]
+  (let [ps-map-from-history (history->pair&score-map history)
+        ps-map-from-request (group&block->pair&score-map group-requests block-requests)]
+    (merge ps-map-from-request ps-map-from-history)))
+
+(defn score-group [group pair&score-map]
   (let [pairs (all-combinations (:members group))
-        score
-        (reduce
-         (fn [sum pair]
-           (if (contains? scored-combination pair)
-             (+ sum (:score (get scored-combination pair)))
-             sum))
-         0 pairs)]
-    (assoc group score-key {:value score})))
+        matching-scores (vals (select-keys pair&score-map pairs))
+        score-list (map :score matching-scores)
+        sum (apply + score-list)]
+    (assoc group :score {:value sum})))
 
-(defn score-groups [groups scored-combination score-key]
-  (let [updated-groups (map #(score-group % scored-combination score-key) (:groups groups))
-        total-score {:value (apply + (map :value (map score-key updated-groups)))}]
-    (assoc (assoc groups :groups updated-groups) score-key total-score)))
+(defn- sum-scores [scores]
+  (reduce (fn [sum score] (+ sum (:value score))) 0 scores))
 
-(defn score-based-evaluator [request score-key]
-  (let [combination (scored-combination request)]
-    (fn [group-lot]
-      (score-groups group-lot combination score-key))))
+(defn score-lot [lot pair&score-map]
+  (let [scored-groups (map #(score-group % pair&score-map) (:groups lot))
+        total-score-val (sum-scores (map :score scored-groups))]
+    (-> (assoc lot :groups scored-groups)
+        (assoc :score {:value total-score-val}))))
+
+(defn score-based-evaluator [request]
+  (let [pair&score-map (create-pair&score-map request)]
+    (fn [lot]
+      (score-lot lot pair&score-map))))

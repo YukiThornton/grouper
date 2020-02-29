@@ -3,17 +3,25 @@
             [grouper.domain.evaluator :as evaluator]
             [grouper.domain.picker :as picker]))
 
-(defn create-evaluated-group-lot [{:keys [grouper request evaluators]}]
-  (reduce (fn [map evaluator] (evaluator map)) (grouper request) evaluators))
+(defn combine-evaluators [evaluators]
+  (fn [initial-group]
+    (reduce (fn [group evaluator] (evaluator group)) initial-group evaluators)))
 
-(defn create-evaluated-group-lots [{:keys [lot-count] :as param}]
-  (let [param-for-lot (dissoc param :lot-count)]
-    (map
-     (fn [_] (create-evaluated-group-lot param-for-lot))
-     (repeat lot-count nil))))
+(defn combine-grouper&evaluators [grouper evaluators]
+  (let [combined-evals (combine-evaluators evaluators)]
+    (fn [request] (-> (grouper request)
+                      (combined-evals)))))
+
+(defn create-lot-generator [f request]
+  (fn [] (f request)))
+
+(defn map-times [count f]
+  (map (fn [_] (f)) (repeat count nil)))
 
 (defn highest-scored-group-lot [requirement request]
-  (let [lots (create-evaluated-group-lots {:grouper (grouper/random-grouper requirement)
-                                 :evaluators [(evaluator/score-based-evaluator request :score)]
-                                 :lot-count 100})]
+  (let [generator
+        (-> (combine-grouper&evaluators (grouper/random-grouper requirement)
+                                        [(evaluator/score-based-evaluator request)])
+            (create-lot-generator request))
+        lots (map-times 100 generator)]
     ((picker/high-score-picker [:score :value]) lots)))

@@ -2,7 +2,7 @@
   (:require [grouper.domain.evaluator :as sut]
             [clojure.test :as t]))
 
-(t/deftest test-scored-combination
+(t/deftest test-create-pair&score-map
   (t/testing "Returns map with combination set as key, score as value"
     (let [request {:group-requests {:a [:b :i]
                                     :b [:c :d]
@@ -28,38 +28,42 @@
                               :score -70}
                     #{:j :k} {:type :history-block
                                :score -70}}]
-      (t/is (= expected (sut/scored-combination request))))))
+      (t/is (= expected (sut/create-pair&score-map request))))))
 
 (t/deftest test-score-group
   (t/testing "Score group"
-    (let [group {:members #{:a :b :c}}
-          scored-combination {#{:a :b} {:score 20}
+    (let [group {:members #{:a :b :c}
+                 :other-eval :other-eval1}
+          pair&score-map {#{:a :b} {:score 20}
                               #{:c :a} {:score -3}
                               #{:c :d} {:score 2}}
           expected {:members #{:a :b :c}
-                    :score {:value 17}}]
-      (t/is (= expected (sut/score-group group scored-combination :score))))))
+                    :score {:value 17}
+                    :other-eval :other-eval1}]
+      (t/is (= expected (sut/score-group group pair&score-map))))))
 
-(t/deftest test-score-groups
-  (t/testing "Score groups"
-    (let [group-lot {:groups [{:members #{:a :b :c}}
-                              {:members #{:c :d}}]}
-          scored-combination {#{:a :b} {:score 20}
+(t/deftest test-score-lot
+  (t/testing "Score lot"
+    (let [lot {:groups [{:members #{:a :b :c}}
+                        {:members #{:c :d}}]
+               :other-eval :other-eval1}
+          pair&score-map {#{:a :b} {:score 20}
                               #{:c :a} {:score -3}
                               #{:c :d} {:score 2}}
           expected {:groups [{:members #{:a :b :c}
                               :score {:value 17}}
                              {:members #{:c :d}
                               :score {:value 2}}]
-                    :score {:value 19}}]
-      (t/is (= expected (sut/score-groups group-lot scored-combination :score))))))
+                    :score {:value 19}
+                    :other-eval :other-eval1}]
+      (t/is (= expected (sut/score-lot lot pair&score-map))))))
 
 (t/deftest test-score-based-evaluator
   (t/testing "Returns function that calculates score of given group lot"
-    (let [param {:groups [:group1 :group2]}
+    (let [lot {:groups [:group1 :group2]}
           expected {:groups [:scored-group1 :scored-group2]
-                    :score-key :score}]
+                    :score :score1}]
       (with-redefs
-        [sut/scored-combination #(when (= :request %) :scored-comnination)
-         sut/score-groups #(when (and (= param %1) (= :scored-comnination %2) (= :score-key %3)) expected)]
-        (t/is (= expected ((sut/score-based-evaluator :request :score-key) param)))))))
+        [sut/create-pair&score-map #(when (= :request %) :pair&score-map)
+         sut/score-lot #(when (and (= lot %1) (= :pair&score-map %2)) expected)]
+        (t/is (= expected ((sut/score-based-evaluator :request) lot)))))))
