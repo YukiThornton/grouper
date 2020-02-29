@@ -23,5 +23,5 @@
         (-> (combine-grouper&evaluators (grouper/random-grouper requirement)
                                         [(evaluator/score-based-evaluator request)])
             (create-lot-generator request))
-        lots (map-times 100 generator)]
+        lots (map-times 1000 generator)]
     ((picker/high-score-picker [:score :value]) lots)))

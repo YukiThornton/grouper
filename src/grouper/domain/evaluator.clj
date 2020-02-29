@@ -56,7 +56,7 @@
     (merge ps-map-from-request ps-map-from-history)))
 
 (defn score-group [group pair&score-map]
-  (let [pairs (all-combinations (:members group))
+  (let [pairs (all-pair-combinations (:members group))
         matching-scores (vals (select-keys pair&score-map pairs))
         score-list (map :score matching-scores)
         sum (apply + score-list)]

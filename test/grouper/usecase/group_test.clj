@@ -54,7 +54,7 @@
                                 (= :request %2))
                        :generator-f)
                     sut/map-times
-                    #(when (and (= 100 %1)
+                    #(when (and (= 1000 %1)
                                 (= :generator-f %2))
                        :group-lots)
                     picker/high-score-picker
