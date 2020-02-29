@@ -57,8 +57,9 @@
 
 (t/deftest test-to-grouping-requirement
   (t/testing "Creates grouping requirement from provided input"
-    (let [param {:group-requests :group-csv}
-          expected {:group-count 5
+    (let [param {:group-count "7"
+                 :group-requests :group-csv}
+          expected {:group-count 7
                     :members "MEMBERS"}]
       (with-redefs [sut/to-members #(when (= :group-csv %) "MEMBERS")]
         (t/is (= expected (sut/to-grouping-requirement param)))))))

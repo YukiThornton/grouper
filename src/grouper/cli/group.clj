@@ -36,8 +36,8 @@
 (defn load-history []
   (into #{} (mapcat to-history-from-csv (get-history-files))))
 
-(defn to-grouping-requirement [{:keys [group-requests]}]
-  {:group-count 5
+(defn to-grouping-requirement [{:keys [group-count group-requests]}]
+  {:group-count (Integer/parseInt group-count)
    :members (to-members group-requests)})
 
 (defn to-grouping-request [{:keys [group-requests block-requests]}]
