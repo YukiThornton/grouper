@@ -63,11 +63,24 @@
                        (fn [group-lots] (when (= :group-lots group-lots) :highest-scored-lot)))]
         (t/is (= expected (sut/highest-scored-group-lot requirement request 1000)))))))
 
+(t/deftest test-request-with-history
+  (t/testing "Loads history and assoc with existing request"
+    (let [load-history-fn (fn [] #{:history1 :history2})]
+      (t/is (= {:req1 "req1" :req2 "req2" :history #{:history1 :history2}}
+               (sut/request-with-history {:req1 "req1" :req2 "req2"} load-history-fn))))))
+
 (t/deftest test-highest-of-random
   (t/testing "Call highest-scored-group-lot with configuration"
-    (let [f (ig/init-key :grouper.usecase.group/highest-of-random {:gen-count 10})]
-      (with-redefs [sut/highest-scored-group-lot #(when (and (= :requirement %1)
-                                                             (= :request %2)
-                                                             (= 10 %3))
-                                                    :expected)]
+    (let [f (ig/init-key :grouper.usecase.group/highest-of-random
+                         {:gen-count 10
+                          :load-history :load-history-fn})]
+      (with-redefs [sut/request-with-history
+                    #(when (and (= :request %1)
+                                (= :load-history-fn %2))
+                       :request-with-history)
+                    sut/highest-scored-group-lot
+                    #(when (and (= :requirement %1)
+                                (= :request-with-history %2)
+                                (= 10 %3))
+                       :expected)]
         (t/is (= :expected (f :requirement :request)))))))

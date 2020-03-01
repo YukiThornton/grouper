@@ -2,7 +2,8 @@
   (:require [integrant.core :as ig]
             [clojure.string :as str]
             [grouper.cli.group]
-            [grouper.usecase.group]))
+            [grouper.usecase.group]
+            [grouper.gateway.history]))
 
 (defn -main [& args]
   (let [conf (ig/read-string (slurp "resources/grouper/config.edn"))
