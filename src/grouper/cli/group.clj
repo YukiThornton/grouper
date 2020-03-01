@@ -1,6 +1,6 @@
 (ns grouper.cli.group
   (:require [clojure.string :as str]
-            [grouper.usecase.group :as usecase]))
+            [integrant.core :as ig]))
 
 (defn load-csv-lines [csv-file]
   (->> (slurp csv-file)
@@ -45,9 +45,9 @@
    :block-requests (to-requests block-requests)
    :history (load-history)})
 
-(defn to-groups [param]
-  (let [group-lot(usecase/highest-scored-group-lot (to-grouping-requirement param)
-                                                   (to-grouping-request param))]
+(defn to-groups [create-groups-fn param]
+  (let [group-lot (create-groups-fn (to-grouping-requirement param)
+                                    (to-grouping-request param))]
     (println (:groups group-lot))
     (println (:score group-lot))
     (map :members (:groups group-lot))))
@@ -65,11 +65,13 @@
 (defn output-file-name []
   (str "groups-" (unique-file-suffix) ".csv"))
 
-(defn to-groups-in-csv [param]
-  {:data (-> (to-groups param)
-             (to-csv-lines))
-   :file-name (output-file-name)})
+(defn spit-to-csv [content]
+  (spit (output-file-name) content))
 
-(defn write-groups-to-csv [param]
-  (let [{:keys [data file-name]} (to-groups-in-csv param)]
-    (spit file-name data)))
+(defn write-groups-to-csv [create-groups-fn param]
+  (-> (to-groups create-groups-fn param)
+      (to-csv-lines)
+      (spit-to-csv)))
+
+(defmethod ig/init-key ::write-groups [_ {:keys [create-groups]}]
+  (fn [param] (write-groups-to-csv create-groups param)))

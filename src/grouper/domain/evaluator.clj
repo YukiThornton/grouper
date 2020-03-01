@@ -50,7 +50,7 @@
         unique-history-pairs (into #{} history-pairs)]
     (map-filled-with unique-history-pairs (score-with-type :history-block))))
 
-(defn- create-pair&score-map [{:keys [group-requests block-requests history]}]
+(defn create-pair&score-map [{:keys [group-requests block-requests history]}]
   (let [ps-map-from-history (history->pair&score-map history)
         ps-map-from-request (group&block->pair&score-map group-requests block-requests)]
     (merge ps-map-from-request ps-map-from-history)))

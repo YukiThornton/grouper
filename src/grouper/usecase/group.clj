@@ -1,5 +1,6 @@
 (ns grouper.usecase.group
-  (:require [grouper.domain.grouper :as grouper]
+  (:require [integrant.core :as ig]
+            [grouper.domain.grouper :as grouper]
             [grouper.domain.evaluator :as evaluator]
             [grouper.domain.picker :as picker]))
 
@@ -18,10 +19,14 @@
 (defn map-times [count f]
   (map (fn [_] (f)) (repeat count nil)))
 
-(defn highest-scored-group-lot [requirement request]
+(defn highest-scored-group-lot [requirement request gen-count]
   (let [generator
         (-> (combine-grouper&evaluators (grouper/random-grouper requirement)
                                         [(evaluator/score-based-evaluator request)])
             (create-lot-generator request))
-        lots (map-times 1000 generator)]
+        lots (map-times gen-count generator)]
     ((picker/high-score-picker [:score :value]) lots)))
+
+(defmethod ig/init-key ::highest-of-random [_ {:keys [gen-count]}]
+  (fn [requirement request]
+    (highest-scored-group-lot requirement request gen-count)))

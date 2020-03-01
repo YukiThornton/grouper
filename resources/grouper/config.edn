@@ -1,0 +1,4 @@
+{:grouper.usecase.group/highest-of-random
+ {:gen-count 1000}
+ :grouper.cli.group/write-groups
+ {:create-groups #ig/ref :grouper.usecase.group/highest-of-random}}

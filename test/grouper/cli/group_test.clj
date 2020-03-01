@@ -1,8 +1,7 @@
 (ns grouper.cli.group-test
   (:require [grouper.cli.group :as sut]
-            [grouper.usecase.group :as usecase]
-            [clojure.test :as t]
-            [grouper.usecase.group :as usecase]))
+            [integrant.core :as ig]
+            [clojure.test :as t]))
 
 (t/deftest test-load-csv-lines
   (t/testing "Load lines of given csv"
@@ -82,15 +81,13 @@
 
 (t/deftest test-to-groups
   (t/testing "Creates groups from provided param"
-    (let [param {:param "PARAM"}
-          usecase-result {:groups [{:members [:mem1 :mem2]}
-                                   {:members [:mem3 :mem4]}]}
+    (let [create-groups-fn
+          #(when (and (= :requirement %1) (= :request %2))
+             {:groups [{:members [:mem1 :mem2]} {:members [:mem3 :mem4]}]})
           expected [[:mem1 :mem2] [:mem3 :mem4]]]
-      (with-redefs [sut/to-grouping-requirement #(when (= param %) :requirement)
-                    sut/to-grouping-request #(when (= param %) :request)
-                    usecase/highest-scored-group-lot
-                    #(when (and (= :requirement %1) (= :request %2)) usecase-result)]
-        (t/is (= expected (sut/to-groups param)))))))
+      (with-redefs [sut/to-grouping-requirement #(when (= :param %) :requirement)
+                    sut/to-grouping-request #(when (= :param %) :request)]
+        (t/is (= expected (sut/to-groups create-groups-fn :param)))))))
 
 (t/deftest test-to-csv-lines
   (t/testing "Returns csv string of provided collection"
@@ -101,16 +98,18 @@
     (with-redefs [sut/unique-file-suffix (fn [] "2020-02-23-88888")]
       (t/is (= "groups-2020-02-23-88888.csv" (sut/output-file-name))))))
 
-(t/deftest test-to-groups-in-csv
+(t/deftest test-write-groups-to-csv
   (t/testing "Creates a csv file with groups"
-    (let [param {:group-requests "a.csv" :block-requests "b.csv"}
-          groups #{}
-          csv-string "csvcsv"
-          output-csv "output.csv"
-          expected {:data csv-string
-                    :file-name output-csv}]
-      (with-redefs
-        [sut/to-groups #(when (= param %) groups)
-         sut/to-csv-lines #(when (= groups %) csv-string)
-         sut/output-file-name (fn [] output-csv)]
-        (t/is (= expected (sut/to-groups-in-csv param)))))))
+    (with-redefs
+      [sut/to-groups #(when (and (= :create-groups-fn %1) (= :param %2)) :groups)
+       sut/to-csv-lines #(when (= :groups %) :csv-string)
+       sut/spit-to-csv #(when (= :csv-string %) :expected)]
+      (t/is (= :expected (sut/write-groups-to-csv :create-groups-fn :param))))))
+
+(t/deftest test-write-groups
+  (t/testing "Calls write-groups-to-csv with configuration"
+    (let [f (ig/init-key :grouper.cli.group/write-groups {:create-groups :create-groups-fn})]
+      (with-redefs [sut/write-groups-to-csv #(when (and (= :create-groups-fn %1)
+                                                        (= :param %2))
+                                               :expected)]
+        (t/is (= :expected (f :param)))))))

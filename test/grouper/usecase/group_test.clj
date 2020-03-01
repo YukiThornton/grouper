@@ -3,6 +3,7 @@
             [grouper.domain.grouper :as grouper]
             [grouper.domain.evaluator :as evaluator]
             [grouper.domain.picker :as picker]
+            [integrant.core :as ig]
             [clojure.test :as t]))
 
 (t/deftest test-combine-evaluators
@@ -35,7 +36,7 @@
     (t/is (= [:a :a :a] (sut/map-times 3 (fn [] :a))))))
 
 (t/deftest test-highest-scored-group-lot
-  (t/testing "Creates 100 lots of random groups and returns one with highest score"
+  (t/testing "Creates lots of random groups and returns one with highest score"
     (let [expected :highest-scored-lot
           requirement :requirement
           request :request]
@@ -60,4 +61,13 @@
                     picker/high-score-picker
                     #(when (= [:score :value] %)
                        (fn [group-lots] (when (= :group-lots group-lots) :highest-scored-lot)))]
-        (t/is (= expected (sut/highest-scored-group-lot requirement request)))))))
+        (t/is (= expected (sut/highest-scored-group-lot requirement request 1000)))))))
+
+(t/deftest test-highest-of-random
+  (t/testing "Call highest-scored-group-lot with configuration"
+    (let [f (ig/init-key :grouper.usecase.group/highest-of-random {:gen-count 10})]
+      (with-redefs [sut/highest-scored-group-lot #(when (and (= :requirement %1)
+                                                             (= :request %2)
+                                                             (= 10 %3))
+                                                    :expected)]
+        (t/is (= :expected (f :requirement :request)))))))
