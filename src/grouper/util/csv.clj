@@ -1,7 +1,7 @@
 (ns grouper.util.csv
   (:require [clojure.string :as str]))
 
-(defn load-csv-lines [csv-file]
+(defn load-lines [csv-file]
   (->> (slurp csv-file)
        (str/split-lines)
        (map #(str/split % #","))))

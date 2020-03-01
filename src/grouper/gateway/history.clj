@@ -12,7 +12,7 @@
        (filter #(str/starts-with? % "groups-"))))
 
 (defn to-history-from-csv [csv]
-  (let [csv-lines (csv/load-csv-lines csv)]
+  (let [csv-lines (csv/load-lines csv)]
     (into #{} (map #(into #{} %) csv-lines))))
 
 (defn do-load-history []

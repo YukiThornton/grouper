@@ -6,14 +6,14 @@
   (remove #(or (= "-" %) (= "invalid" %)) data))
 
 (defn to-requests [csv]
-  (let [csv-lines (csv/load-csv-lines csv)
+  (let [csv-lines (csv/load-lines csv)
         keys (map first csv-lines)
         values (->> (map rest csv-lines)
                     (map remove-invalid-csv-data))]
     (zipmap keys values)))
 
 (defn to-members [csv]
-  (let [csv-lines (csv/load-csv-lines csv)]
+  (let [csv-lines (csv/load-lines csv)]
     (into #{} (map first csv-lines))))
 
 (defn to-grouping-requirement [{:keys [group-count group-requests]}]

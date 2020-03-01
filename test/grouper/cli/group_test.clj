@@ -11,7 +11,7 @@
                       ("b" "c" "a"))
           expected {"a" '("d" "c")
                     "b" '("c" "a")}]
-      (with-redefs [csv/load-csv-lines (fn [c] (when (= csv c) csv-lines))]
+      (with-redefs [csv/load-lines (fn [c] (when (= csv c) csv-lines))]
         (t/is (= expected (sut/to-requests csv)))))))
 
 (t/deftest test-to-members
@@ -19,7 +19,7 @@
     (let [csv "abc.csv"
           csv-lines '(("a") ("b" "d") ("c"))
           expected #{"a" "b" "c"}]
-      (with-redefs [csv/load-csv-lines #(when (= csv %) csv-lines)]
+      (with-redefs [csv/load-lines #(when (= csv %) csv-lines)]
         (t/is (= expected (sut/to-members csv)))))))
 
 (t/deftest test-to-grouping-requirement

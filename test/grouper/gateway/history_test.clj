@@ -15,7 +15,7 @@
     (let [csv "abc.csv"
           csv-lines '(("a" "b" "c") ("d" "e" "f"))
           expected #{#{"a" "b" "c"} #{"d" "e" "f"}}]
-      (with-redefs [csv/load-csv-lines #(when (= csv %) csv-lines)]
+      (with-redefs [csv/load-lines #(when (= csv %) csv-lines)]
         (t/is (= expected (sut/to-history-from-csv csv)))))))
 
 (t/deftest test-do-load-history
