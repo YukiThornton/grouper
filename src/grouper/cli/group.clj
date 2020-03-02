@@ -24,12 +24,24 @@
   {:group-requests (to-requests group-requests)
    :block-requests (to-requests block-requests)})
 
-(defn to-groups [create-groups-fn param]
-  (let [group-lot (create-groups-fn (to-grouping-requirement param)
-                                    (to-grouping-request param))]
-    (println (:groups group-lot))
-    (println (:score group-lot))
-    (map :members (:groups group-lot))))
+(defn create-group-lot [create-groups-fn param]
+  (create-groups-fn (to-grouping-requirement param)
+                   (to-grouping-request param)))
+
+(defn log-group-lot [lot]
+  (println (:groups lot))
+  (println (:score lot))
+  lot)
+
+(defn to-group-members [lot]
+  (->> lot
+      (:groups)
+      (map :members)))
+
+(defn create-group-members-with-logging [create-groups-fn param]
+  (-> (create-group-lot create-groups-fn param)
+      (log-group-lot)
+      (to-group-members)))
 
 (defn unique-file-suffix []
   (.format (java.time.LocalDateTime/now)
@@ -41,10 +53,10 @@
 (defn spit-to-csv [content]
   (spit (output-file-name) content))
 
-(defn write-groups-to-csv [create-groups-fn param]
-  (-> (to-groups create-groups-fn param)
+(defn write-group-members-to-csv [create-groups-fn param]
+  (-> (create-group-members-with-logging create-groups-fn param)
       (csv/to-lines)
       (spit-to-csv)))
 
 (defmethod ig/init-key ::write-groups [_ {:keys [create-groups]}]
-  (fn [param] (write-groups-to-csv create-groups param)))
+  (fn [param] (write-group-members-to-csv create-groups param)))
