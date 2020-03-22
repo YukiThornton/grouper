@@ -2,30 +2,26 @@
   (:require [integrant.core :as ig]
             [grouper.domain.grouper :as grouper]
             [grouper.domain.evaluator :as evaluator]
-            [grouper.domain.picker :as picker]))
+            [grouper.domain.picker :as picker]
+            [grouper.port.history :as port]))
 
-(defn combine-evaluators [evaluators]
-  (fn [initial-group]
-    (reduce (fn [group evaluator] (evaluator group)) initial-group evaluators)))
+(defn combine-grouper-and-evaluator [grouper evaluator]
+  (fn [request] (-> (grouper request)
+                    (evaluator))))
 
-(defn combine-grouper&evaluators [grouper evaluators]
-  (let [combined-evals (combine-evaluators evaluators)]
+(defn scored-random-lot-generator [{:keys [requirement request]}]
+  (let [grouper (grouper/random-grouper requirement)
+        evaluator (evaluator/score-based-evaluator request)]
     (fn [request] (-> (grouper request)
-                      (combined-evals)))))
+                      (evaluator)))))
 
-(defn create-lot-generator [f request]
-  (fn [] (f request)))
+(defn map-times [count f param]
+  (map (fn [p] (f p)) (repeat count param)))
 
-(defn map-times [count f]
-  (map (fn [_] (f)) (repeat count nil)))
-
-(defn highest-scored-group-lot [requirement request gen-count]
-  (let [generator
-        (-> (combine-grouper&evaluators (grouper/random-grouper requirement)
-                                        [(evaluator/score-based-evaluator request)])
-            (create-lot-generator request))
-        lots (map-times gen-count generator)]
-    ((picker/high-score-picker [:score :value]) lots)))
+(defn highest-scored-group-lot [{:keys [request] :as input} gen-count]
+  (let [generator (scored-random-lot-generator input)
+        lots (map-times gen-count generator request)]
+    (picker/high-score-picker [:score :value] lots)))
 
 (defn log-group-lot [lot]
   (println (:groups lot))
@@ -33,16 +29,17 @@
   lot)
 
 (defn group-lot->group-members [lot]
-  (->> lot
-       (:groups)
+  (->> (:groups lot)
        (map :members)))
 
-(defn request-with-history [requirement load-history-fn]
-  (assoc requirement :history (load-history-fn)))
+(defn combine-input [{:keys [request] :as user-input} history]
+  (->> (assoc request :history history)
+       (assoc user-input :request)))
 
-(defmethod ig/init-key ::highest-of-random [_ {:keys [load-history gen-count]}]
-  (fn [{:keys [requirement request]}]
-    (let [updated-request (request-with-history request load-history)]
-      (-> (highest-scored-group-lot requirement updated-request gen-count)
+(defmethod ig/init-key ::highest-of-random [_ {:keys [history-port gen-count]}]
+  (fn [user-input]
+    (let [history (port/load-history history-port)
+          input (combine-input user-input history)]
+      (-> (highest-scored-group-lot input gen-count)
           log-group-lot
           group-lot->group-members))))

@@ -1,13 +1,13 @@
 (ns grouper.util.csv
   (:require [clojure.string :as str]))
 
-(defn load-lines [csv-file]
-  (->> (slurp csv-file)
+(defn load-lines [file-name]
+  (->> (slurp file-name)
        (str/split-lines)
        (map #(str/split % #","))))
 
-(defn- to-line [coll]
+(defn- seq->line [coll]
   (str (str/join "," coll) \newline))
 
-(defn to-lines [coll]
-  (str/join (map to-line coll)))
+(defn seq->lines [coll]
+  (str/join (map seq->line coll)))

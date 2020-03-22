@@ -1,7 +1,12 @@
-{:grouper.gateway.history/load-history
+{:grouper.gateway.history/get-history
  {}
+
+ :grouper.port.history/history
+ {:get-history #ig/ref :grouper.gateway.history/get-history}
+
  :grouper.usecase.group/highest-of-random
  {:gen-count 1000
-  :load-history #ig/ref :grouper.gateway.history/load-history}
+  :history-port #ig/ref :grouper.port.history/history}
+
  :grouper.cli.group/write-groups
  {:create-groups #ig/ref :grouper.usecase.group/highest-of-random}}

@@ -3,20 +3,23 @@
             [clojure.string :as str]
             [grouper.util.csv :as csv]))
 
-(defn current-dir-file-names []
+(defn file-names-on-current-dir []
   (.list (clojure.java.io/file ".")))
 
-(defn get-history-files []
-  (->> (current-dir-file-names)
-       (filter #(str/ends-with? % ".csv"))
-       (filter #(str/starts-with? % "groups-"))))
+(defn history-file? [file-name]
+  (and (str/ends-with? file-name ".csv")
+       (str/starts-with? file-name "groups-")))
 
-(defn to-history-from-csv [csv]
-  (let [csv-lines (csv/load-lines csv)]
-    (into #{} (map #(into #{} %) csv-lines))))
+(defn available-history-files []
+  (->> (file-names-on-current-dir)
+       (filter history-file?)))
 
-(defn do-load-history []
-  (into #{} (mapcat to-history-from-csv (get-history-files))))
+(defn csv->history [csv-lines]
+  (->> (map set csv-lines)
+       set))
 
-(defmethod ig/init-key ::load-history [_ _]
-  (fn [] (do-load-history)))
+(defmethod ig/init-key ::get-history [_ _]
+  (fn [] (->> (available-history-files)
+              (map csv/load-lines)
+              (mapcat csv->history)
+              set)))

@@ -11,6 +11,6 @@
       (with-redefs [slurp #(when (= csv %) csv-string)]
         (t/is (= expected (sut/load-lines csv)))))))
 
-(t/deftest test-to-csv-lines
+(t/deftest test-seq->csv-lines
   (t/testing "Returns csv string of provided collection"
-    (t/is (= "a,b,c\nd,e,f\n" (sut/to-lines '(("a" "b" "c") ("d" "e" "f")))))))
+    (t/is (= "a,b,c\nd,e,f\n" (sut/seq->lines '(("a" "b" "c") ("d" "e" "f")))))))

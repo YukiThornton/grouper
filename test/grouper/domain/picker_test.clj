@@ -12,4 +12,4 @@
                        :score {:value 98}}
                       {:groups :groups3
                        :score {:value 97}}]]
-      (t/is (= expected ((sut/high-score-picker [:score :value]) group-lots))))))
+      (t/is (= expected (sut/high-score-picker [:score :value] group-lots))))))

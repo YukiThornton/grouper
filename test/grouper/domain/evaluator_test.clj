@@ -2,7 +2,7 @@
   (:require [grouper.domain.evaluator :as sut]
             [clojure.test :as t]))
 
-(t/deftest test-create-pair&score-map
+(t/deftest test-create-pair-score-map
   (t/testing "Returns map with combination set as key, score as value"
     (let [request {:group-requests {:a [:b :i]
                                     :b [:c :d]
@@ -28,7 +28,7 @@
                               :score -70}
                     #{:j :k} {:type :history-block
                                :score -70}}]
-      (t/is (= expected (sut/create-pair&score-map request))))))
+      (t/is (= expected (sut/create-pair-score-map request))))))
 
 (t/deftest test-score-group
   (t/testing "Score group"
@@ -64,6 +64,6 @@
           expected {:groups [:scored-group1 :scored-group2]
                     :score :score1}]
       (with-redefs
-        [sut/create-pair&score-map #(when (= :request %) :pair&score-map)
+        [sut/create-pair-score-map #(when (= :request %) :pair&score-map)
          sut/score-lot #(when (and (= lot %1) (= :pair&score-map %2)) expected)]
         (t/is (= expected ((sut/score-based-evaluator :request) lot)))))))

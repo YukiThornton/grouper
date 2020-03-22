@@ -32,7 +32,7 @@
     (let [f (ig/init-key :grouper.cli.group/write-groups {:create-groups :create-groups-fn})]
       (with-redefs [sut/create-group-lot
                     #(when (and (= :create-groups-fn %1) (= :param %2)) :group-members)
-                    csv/to-lines #(when (= :group-members %) :csv-string)
+                    csv/seq->lines #(when (= :group-members %) :csv-string)
                     sut/gen-unique-file-name #(when (and (= "groups-" %1)
                                                          (= ".csv" %2))
                                                 :file-name)

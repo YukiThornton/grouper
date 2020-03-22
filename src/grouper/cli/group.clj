@@ -17,5 +17,5 @@
 
 (defmethod ig/init-key ::write-groups [_ {:keys [create-groups]}]
   (fn [param] (->> (create-group-lot create-groups param)
-                  (csv/to-lines)
+                  (csv/seq->lines)
                   (spit (gen-unique-file-name "groups-" ".csv")))))
