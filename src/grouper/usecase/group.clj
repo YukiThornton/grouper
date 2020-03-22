@@ -27,10 +27,22 @@
         lots (map-times gen-count generator)]
     ((picker/high-score-picker [:score :value]) lots)))
 
+(defn log-group-lot [lot]
+  (println (:groups lot))
+  (println (:score lot))
+  lot)
+
+(defn group-lot->group-members [lot]
+  (->> lot
+       (:groups)
+       (map :members)))
+
 (defn request-with-history [requirement load-history-fn]
   (assoc requirement :history (load-history-fn)))
 
 (defmethod ig/init-key ::highest-of-random [_ {:keys [load-history gen-count]}]
-  (fn [requirement request]
+  (fn [{:keys [requirement request]}]
     (let [updated-request (request-with-history request load-history)]
-      (highest-scored-group-lot requirement updated-request  gen-count))))
+      (-> (highest-scored-group-lot requirement updated-request gen-count)
+          log-group-lot
+          group-lot->group-members))))
