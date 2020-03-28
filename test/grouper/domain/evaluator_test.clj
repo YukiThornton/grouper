@@ -58,12 +58,12 @@
                     :other-eval :other-eval1}]
       (t/is (= expected (sut/score-lot lot pair&score-map))))))
 
-(t/deftest test-score-based-evaluator
-  (t/testing "Returns function that calculates score of given group lot"
+(t/deftest test-create-score-based-evaluator
+  (t/testing "Returns score-based-evaluator that calculates score of given group lot"
     (let [lot {:groups [:group1 :group2]}
           expected {:groups [:scored-group1 :scored-group2]
                     :score :score1}]
       (with-redefs
         [sut/create-pair-score-map #(when (= :request %) :pair&score-map)
          sut/score-lot #(when (and (= lot %1) (= :pair&score-map %2)) expected)]
-        (t/is (= expected ((sut/score-based-evaluator :request) lot)))))))
+        (t/is (= expected ((sut/create-score-based-evaluator :request) lot)))))))

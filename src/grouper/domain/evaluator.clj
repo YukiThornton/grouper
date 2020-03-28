@@ -71,7 +71,10 @@
     (-> (assoc lot :groups scored-groups)
         (assoc :score {:value total-score-val}))))
 
-(defn score-based-evaluator [request]
+(defn score-based-evaluator [pair-score-map lot]
+  (score-lot lot pair-score-map))
+
+(defn create-score-based-evaluator [request]
   (let [pair-score-map (create-pair-score-map request)]
-    (fn [lot]
-      (score-lot lot pair-score-map))))
+    (partial score-based-evaluator pair-score-map)))
+

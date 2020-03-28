@@ -12,8 +12,8 @@
   (t/testing "Returns [start end] indeces of provided group-sizes"
     (t/is (= [[0 5] [5 9] [9 11]] (sut/subvec-indeces [5 4 2])))))
 
-(t/deftest test-random-grouper
-  (t/testing "Returns fn that creates specified amount of groups randomly"
+(t/deftest test-create-random-grouper
+  (t/testing "Returns grouper that creates specified amount of groups randomly"
     (let [expected {:groups [{:members [:sa :sb :sc :sd]}
                              {:members [:se :sf :sg]}]}
           members [:a :b :c :d :e :f :g]
@@ -21,4 +21,4 @@
                        :group-count 2}
           shuffled-members [:sa :sb :sc :sd :se :sf :sg]]
       (with-redefs [shuffle #(when (= members %) shuffled-members)]
-        (t/is (= expected ((sut/random-grouper requirement) {})))))))
+        (t/is (= expected ((sut/create-random-grouper requirement) {})))))))

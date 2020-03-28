@@ -14,12 +14,14 @@
          [[0 0]]
          group-sizes)))
 
-(defn random-grouper [{:keys [members group-count]}]
-  (let [members-vec (if (vector? members) members (vec members))
-        group-sizes (group-sizes (count members-vec) group-count)
+(defn random-grouper [members-to-shuffle indeces _]
+  (let [shuffled (shuffle members-to-shuffle)]
+    {:groups
+     (map (fn [[start end]] {:members (subvec shuffled start end)}) indeces)}))
+
+(defn create-random-grouper [{:keys [members group-count]}]
+  (let [members-to-shuffle (if (vector? members) members (vec members))
+        group-sizes (group-sizes (count members-to-shuffle) group-count)
         indeces (subvec-indeces group-sizes)]
-    (fn [_]
-      (let [shuffled (shuffle members-vec)]
-        {:groups
-         (map (fn [[start end]] {:members (subvec shuffled start end)}) indeces)}))))
+    (partial random-grouper members-to-shuffle indeces)))
 

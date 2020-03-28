@@ -3,15 +3,15 @@
             [grouper.util.csv :as csv]
             [grouper.domain.user-input :as user-input]
             [integrant.core :as ig]
-            [clojure.test :as t]))
+            [clojure.test :as t]
+            [grouper.usecase.group :as usecase]))
 
-(t/deftest test-create-group-lot
-  (t/testing "Creates group lot from provided param"
+(t/deftest test-create-user-input
+  (t/testing "Creates user input"
     (let [param {:group-count "3"
-                 :group-requests :group-csv
-                 :block-requests :block-csv}
-          expected {:groups [{:members [:mem1 :mem2]} {:members [:mem3 :mem4]}]}
-          create-groups-fn #(when (= :user-input %) expected)]
+                 :group-request-path :group-csv
+                 :block-request-path :block-csv}
+          expected {:groups [{:members [:mem1 :mem2]} {:members [:mem3 :mem4]}]}]
       (with-redefs [csv/load-lines #(if (= :group-csv %)
                                       :group-csv-lines
                                       (when (= :block-csv %) :block-csv-lines))
@@ -19,8 +19,8 @@
                     #(when (and (= :group-csv-lines %1)
                                 (= :block-csv-lines %2)
                                 (= 3 %3))
-                       :user-input)]
-        (t/is (= expected (sut/create-group-lot create-groups-fn param)))))))
+                       expected)]
+        (t/is (= expected (sut/create-user-input param)))))))
 
 (t/deftest test-gen-unique-file-name
   (t/testing "Returns unique file name for output file"
@@ -29,9 +29,10 @@
 
 (t/deftest test-write-groups
   (t/testing "Calls write-groups-to-csv with configuration"
-    (let [f (ig/init-key :grouper.cli.group/write-groups {:create-groups :create-groups-fn})]
-      (with-redefs [sut/create-group-lot
-                    #(when (and (= :create-groups-fn %1) (= :param %2)) :group-members)
+    (let [f (ig/init-key :grouper.cli.group/write-groups :dep)]
+      (with-redefs [sut/create-user-input #(when (= :param %) :user-input)
+                    usecase/generate-lot-with-high-score
+                    #(when (and (= :dep %1) (= :user-input %2)) :group-members)
                     csv/seq->lines #(when (= :group-members %) :csv-string)
                     sut/gen-unique-file-name #(when (and (= "groups-" %1)
                                                          (= ".csv" %2))
